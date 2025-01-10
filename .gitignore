@@ -1,0 +1,29 @@
+# Ambiente virtual
+venv/
+*.pyc
+__pycache__/
+
+# Configurações específicas do sistema operacional
+*.DS_Store
+Thumbs.db
+
+# Arquivos de log
+*.log
+
+# Configurações de IDEs
+.vscode/
+.idea/
+
+# Arquivos temporários
+*.swp
+*.tmp
+*.bak
+
+# Arquivos de banco de dados SQLite
+db.sqlite3
+
+# Diretório de mídia e uploads
+media/
+
+# Diretório de arquivos estáticos gerados
+staticfiles/

@@ -69,7 +69,7 @@ JAZZMIN_SETTINGS = {
     "related_modal_active": True,
     
     # Custom Styling
-    "custom_css": "jazzmin/custom.css",
+    "custom_css": None,
     "custom_js": None,
     
     # UI Customization
@@ -128,6 +128,15 @@ CORS_ALLOWED_ORIGINS = [
     
 ]
 
+# Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'bulk.smtp.mailtrap.io'
+EMAIL_PORT = 2525
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'smtp@mailtrap.io'
+EMAIL_HOST_PASSWORD = 'f30db8b82e94097a4bba39c266043c02'
+
+FRONTEND_URL = 'http://localhost:3000'  # Update this for production
 CORS_ALLOW_METHODS = [
     'GET',
     'POST',

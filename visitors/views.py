@@ -3,99 +3,105 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
-from django.core.mail import send_mail
-from django.conf import settings
-from django.utils.crypto import get_random_string
-from .serializers import VisitorRegistrationSerializer  # Add this import
+from .serializers import VisitorRegistrationSerializer, LoginSerializer
 from .models import Visitor
+from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
+from django.db import transaction  # Added this import
+import logging
+
+logger = logging.getLogger(__name__)
 
 class VisitorRegistrationView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        serializer = VisitorRegistrationSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
+        try:
+            logger.info("Iniciando processo de registro de novo visitante")
+            serializer = VisitorRegistrationSerializer(data=request.data)
+            
+            if serializer.is_valid():
+                logger.info("Dados de registro validados com sucesso")
+                user = serializer.save()
+                logger.info(f"Novo visitante registrado com sucesso: {user.email}")
+                
+                return Response({
+                    'message': 'Registro realizado com sucesso!'
+                }, status=status.HTTP_201_CREATED)
+            
+            logger.error(f"Erro na validação dos dados de registro: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        except Exception as e:
+            logger.error(f"Erro inesperado durante o registro: {str(e)}", exc_info=True)
             return Response({
-                'message': 'Registro realizado com sucesso! Por favor, verifique seu email.'
-            }, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                'error': 'Erro interno do servidor durante o registro'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class VerifyEmailView(APIView):
+class LoginView(APIView):
     permission_classes = [AllowAny]
 
-    def get(self, request):
-        token = request.query_params.get('token')
+    def post(self, request):
         try:
-            user = Visitor.objects.get(verification_token=token, is_verified=False)
-            user.is_verified = True
-            user.verification_token = None
-            user.save()
-            return Response({
-                'message': 'Email verificado com sucesso!'
-            })
-        except Visitor.DoesNotExist:
-            return Response({
-                'error': 'Token inválido ou expirado'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            logger.info("Iniciando processo de login")
+            serializer = LoginSerializer(data=request.data)
+            
+            if serializer.is_valid():
+                email = serializer.validated_data['email']
+                password = serializer.validated_data['password']
+                
+                logger.info(f"Tentativa de login para o email: {email}")
+                
+                try:
+                    # Primeiro, verificamos se o usuário existe
+                    try:
+                        user = Visitor.objects.get(email=email)
+                    except Visitor.DoesNotExist:
+                        logger.warning(f"Usuário não encontrado: {email}")
+                        return Response({
+                            'error': 'Usuário não encontrado'
+                        }, status=status.HTTP_401_UNAUTHORIZED)
 
-# visitors/serializers.py
-from rest_framework import serializers
-from django.utils.crypto import get_random_string  # Add this import
-from .models import Visitor
+                    # Depois autenticamos
+                    if not user.check_password(password):
+                        logger.warning(f"Senha incorreta para usuário: {email}")
+                        return Response({
+                            'error': 'Senha incorreta'
+                        }, status=status.HTTP_401_UNAUTHORIZED)
 
-class VisitorRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-    password_confirm = serializers.CharField(write_only=True)
+                    # Se chegou aqui, o usuário está autenticado
+                    logger.info(f"Usuário autenticado com sucesso: {email}")
 
-    class Meta:
-        model = Visitor
-        fields = ['email', 'name', 'password', 'password_confirm']
+                    # Gerenciamos o token em uma transação
+                    with transaction.atomic():
+                        # Primeiro removemos qualquer token existente
+                        Token.objects.filter(user=user).delete()
+                        
+                        # Criamos um novo token
+                        token = Token.objects.create(user=user)
+                        
+                        logger.info(f"Token criado com sucesso para: {email}")
+                        
+                        return Response({
+                            'token': token.key,
+                            'user': {
+                                'id': user.id,
+                                'email': user.email,
+                                'name': user.name
+                            }
+                        })
 
-    def validate(self, data):
-        if data['password'] != data['password_confirm']:
-            raise serializers.ValidationError("As senhas não coincidem")
-        return data
-
-    def create(self, validated_data):
-        validated_data.pop('password_confirm')
-        password = validated_data.pop('password')
-        validated_data['username'] = validated_data['email']  # Usando email como username
-        
-        user = Visitor(**validated_data)
-        user.set_password(password)
-        user.verification_token = get_random_string(64)
-        user.save()
-        
-        self.send_verification_email(user)
-        return user
-    
-    def send_verification_email(self, user):
-        # Template para o email
-        verification_url = f"{settings.FRONTEND_URL}/verify-email?token={user.verification_token}"
-        subject = 'Confirme seu email - Crônicas de Moçambique'
-        message = f"""
-        Olá {user.name},
-
-        Obrigado por se registrar no Crônicas de Moçambique! 
-        Para confirmar seu email, clique no link abaixo:
-
-        {verification_url}
-
-        Se você não se registrou no nosso site, ignore este email.
-
-        Atenciosamente,
-        Equipe Crônicas de Moçambique
-        """
-        
-        try:
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=False,
-            )
+                except Exception as e:
+                    logger.error(f"Erro durante autenticação: {str(e)}", exc_info=True)
+                    return Response({
+                        'error': 'Erro durante autenticação'
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+            logger.error(f"Dados de login inválidos: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
         except Exception as e:
-            # Log the error but don't prevent user creation
-            print(f"Error sending verification email: {str(e)}")
+            logger.error(f"Erro inesperado: {str(e)}", exc_info=True)
+            return Response({
+                'error': 'Erro interno do servidor'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -28,3 +28,5 @@ class Visitor(AbstractUser):
     class Meta:
         verbose_name = 'Visitante'
         verbose_name_plural = 'Visitantes'
+        
+    

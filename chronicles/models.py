@@ -1,10 +1,9 @@
 # chronicles/models.py
 from django.db import models
-from django.contrib.auth.models import User
+from django.conf import settings
 from django.db.models.signals import pre_save
 from django.dispatch import receiver
 
-# Modelo Chronicle atualizado
 class Chronicle(models.Model):
     date = models.DateField()
     title = models.CharField(max_length=200)
@@ -13,8 +12,9 @@ class Chronicle(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,null=True, blank=True,
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True, blank=True,
         limit_choices_to={'is_superuser': True},
         help_text="Apenas superusuários podem criar crônicas"
     )
@@ -29,7 +29,7 @@ class Chronicle(models.Model):
 
 class FeaturedChronicle(models.Model):
     user = models.ForeignKey(
-        User, 
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         limit_choices_to={'is_superuser': True},
         help_text="Apenas superusuários podem criar crônicas principais"
@@ -50,7 +50,7 @@ class FeaturedChronicle(models.Model):
         ordering = ['-date']
 
     def __str__(self):
-        return f"Crônica Principal - {self.title} ({self.user.username})"
+        return f"Crônica Principal - {self.title} ({self.user.email})"  # Changed to email since that's our username field
 
     def save(self, *args, **kwargs):
         if not self.pk:

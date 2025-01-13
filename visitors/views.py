@@ -7,7 +7,7 @@ from .serializers import VisitorRegistrationSerializer, LoginSerializer
 from .models import Visitor
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
-from django.db import transaction  # Added this import
+from django.db import transaction
 import logging
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,8 @@ class LoginView(APIView):
                             'user': {
                                 'id': user.id,
                                 'email': user.email,
-                                'name': user.name
+                                'name': user.name,
+                                'is_superuser': user.is_superuser  # Adicionado o campo is_superuser
                             }
                         })
 

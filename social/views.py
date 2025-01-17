@@ -1,95 +1,108 @@
-# views.py
 import logging
 from rest_framework import viewsets, status, permissions
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
-from .serializers import CommentSerializer,LikeSerializer ,ShareSerializer
+from .serializers import CommentSerializer, LikeSerializer, ShareSerializer
 from .models import Comment, Like, Share
 
 logger = logging.getLogger(__name__)
 
-class CommentViewSet(viewsets.ModelViewSet):
+class BaseChronicleViewSet(viewsets.ModelViewSet):
+    """
+    Classe base para views relacionadas a crônicas. 
+    Inclui métodos utilitários para reutilização.
+    """
+    def get_queryset(self):
+        queryset = self.queryset
+        chronicle_id = self.request.query_params.get('chronicle')
+        user_id = self.request.query_params.get('user')
+        
+        if chronicle_id:
+            queryset = queryset.filter(chronicle_id=chronicle_id)
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        
+        return queryset
+
+class CommentViewSet(BaseChronicleViewSet):
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     
     def create(self, request, *args, **kwargs):
-        logger.debug("=" * 50)
-        logger.debug("Creating new comment")
-        logger.debug(f"Request data: {request.data}")
+        logger.info("Iniciando criação de comentário...")
         
         serializer = self.get_serializer(data=request.data)
-        
         try:
             serializer.is_valid(raise_exception=True)
-            logger.debug(f"Serializer is valid. Validated data: {serializer.validated_data}")
             self.perform_create(serializer)
             headers = self.get_success_headers(serializer.data)
-            logger.debug("Comment created successfully")
-            return Response(
-                serializer.data, 
-                status=status.HTTP_201_CREATED, 
-                headers=headers
-            )
+            logger.info("Comentário criado com sucesso.")
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         except ValidationError as e:
-            logger.error(f"Validation error: {str(e)}")
-            return Response(
-                {'detail': str(e.detail[0]) if isinstance(e.detail, list) else str(e.detail)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            logger.warning(f"Erro de validação: {e}")
+            return Response({'detail': e.detail}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            logger.error(f"Error creating comment: {str(e)}")
-            return Response(
-                {'detail': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            logger.error(f"Erro ao criar comentário: {e}")
+            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def perform_create(self, serializer):
-        logger.debug(f"Performing create with validated data: {serializer.validated_data}")
+        logger.debug(f"Salvando comentário: {serializer.validated_data}")
         serializer.save(author=self.request.user)
 
-class LikeViewSet(viewsets.ModelViewSet):
+class LikeViewSet(BaseChronicleViewSet):
     queryset = Like.objects.all()
     serializer_class = LikeSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def create(self, request, *args, **kwargs):
         chronicle_id = request.data.get('chronicle')
-        
         if not chronicle_id:
-            return Response(
-                {'detail': 'Chronicle must be provided'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            return Response({'detail': 'ID da crônica é obrigatório'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Check for existing like
-        like_exists = Like.objects.filter(
-            user=request.user,
-            chronicle_id=chronicle_id
-        ).exists()
+        if Like.objects.filter(user=request.user, chronicle_id=chronicle_id).exists():
+            return Response({'detail': 'Você já curtiu esta crônica'}, status=status.HTTP_400_BAD_REQUEST)
         
-        if like_exists:
-            return Response(
-                {'detail': 'You have already liked this chronicle'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Create new like
         serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save(user=request.user)
-        
-        headers = self.get_success_headers(serializer.data)
-        return Response(
-            serializer.data, 
-            status=status.HTTP_201_CREATED, 
-            headers=headers
-        )
+        try:
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            logger.info("Curtida adicionada com sucesso.")
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except ValidationError as e:
+            logger.warning(f"Erro de validação ao curtir: {e}")
+            return Response({'detail': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Erro ao curtir crônica: {e}")
+            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def perform_create(self, serializer):
+        logger.debug("Adicionando curtida...")
+        serializer.save(user=self.request.user)
 
-class ShareViewSet(viewsets.ModelViewSet):
+class ShareViewSet(BaseChronicleViewSet):
     queryset = Share.objects.all()
     serializer_class = ShareSerializer
     permission_classes = [permissions.IsAuthenticated]
     
+    def create(self, request, *args, **kwargs):
+        logger.info("Iniciando compartilhamento de crônica...")
+        
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            logger.info("Compartilhamento realizado com sucesso.")
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except ValidationError as e:
+            logger.warning(f"Erro de validação ao compartilhar: {e}")
+            return Response({'detail': e.detail}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(f"Erro ao compartilhar crônica: {e}")
+            return Response({'detail': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
     def perform_create(self, serializer):
+        logger.debug("Salvando compartilhamento...")
         serializer.save(user=self.request.user)

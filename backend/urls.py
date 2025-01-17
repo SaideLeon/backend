@@ -22,6 +22,8 @@ urlpatterns = [
     # API URLs
     path('api/', include(router.urls)),
     path('api/', include("visitors.urls")),
+        path('api/', include("social.urls")),
+
     
     # DRF auth URLs (opcional - para interface de navegação da API)
     path('api-auth/', include('rest_framework.urls')),

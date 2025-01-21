@@ -29,7 +29,7 @@ endpoints:
           - https://cronicasmz.choreoapps.dev
           - http://localhost:5173
     openapi:  # Integração com OpenAPI
-      path: /api/openapi.json  # Caminho onde o esquema OpenAPI será servido
+      path: /api/openapi.yaml  # Caminho onde o esquema OpenAPI será servido
       authTypes:
         - NONE
 

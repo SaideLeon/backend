@@ -1,4 +1,4 @@
-schemaVersion: 1.0
+schemaVersion: 1.1
 buildConfig:
   build:
     docker:
@@ -28,6 +28,10 @@ endpoints:
         allowOrigins:
           - https://cronicasmz.choreoapps.dev
           - http://localhost:5173
+    openapi:  # Integração com OpenAPI
+      path: /api/openapi.json  # Caminho onde o esquema OpenAPI será servido
+      authTypes:
+        - NONE
 
 # Configuração dos recursos
 resources:
@@ -51,11 +55,11 @@ environmentVariables:
   - name: ALLOWED_HOSTS
     value: ".choreoapps.dev,localhost,127.0.0.1"
 
-# Configuração de persistência
+# Configuração de volumes persistentes
 volumes:
   - name: media-storage
     mountPath: /app/media
-    size: 1Gi  # 1GB para armazenamento de mídia
+    size: 1Gi  # 1GB para arquivos de mídia
 
 # Configuração de observabilidade
 observability:

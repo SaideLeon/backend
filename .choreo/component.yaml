@@ -2,10 +2,8 @@ schemaVersion: 1.0
 buildConfig:
   build:
     docker:
-      # Configuração Docker para Python
       context: .
       dockerfile: Dockerfile
-  # Dependências necessárias para o build
   dependencies:
     - name: python
       version: "3.11"
@@ -19,8 +17,8 @@ endpoints:
     context: /api
     port: 8000
     visibility: public
-    # Configurações específicas do Django
     service:
+      port: 8000
       security:
         authTypes:
           - NONE  # Para endpoints públicos como login/registro

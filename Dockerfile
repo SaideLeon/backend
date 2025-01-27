@@ -1,42 +1,25 @@
-# Dockerfile
-FROM python:3.11-slim
+# Base image
+FROM python:3.12-slim
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    DJANGO_SUPERUSER_USERNAME=saide \
-    DJANGO_SUPERUSER_EMAIL=saideomarsaid@gmail.com \
-    DJANGO_SUPERUSER_PASSWORD=123456
-
-# Set work directory
+# Define o diretório de trabalho
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    build-essential \
-    libpq-dev \
+# Instala dependências do sistema
+RUN apt-get update && apt-get install -y \
+    libpq-dev gcc --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
+# Copia os arquivos de requisitos
 COPY requirements.txt .
+
+# Instala dependências do Python
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project files
+# Copia o restante do código para o contêiner
 COPY . .
 
-# Create media and static directories
-RUN mkdir -p /app/media /app/staticfiles
-
-# Create and run entrypoint script
-RUN echo '#!/bin/bash\n\
-python manage.py makemigrations\n\
-python manage.py migrate\n\
-python manage.py collectstatic --noinput\n\
-python manage.py createsuperuser --noinput\n\
-python manage.py runserver 0.0.0.0:8000' > /app/entrypoint.sh \
-    && chmod +x /app/entrypoint.sh
-
+# Expõe a porta do contêiner
 EXPOSE 8000
 
-CMD ["/app/entrypoint.sh"]
-
+# Comando de entrada para iniciar o contêiner
+CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"]

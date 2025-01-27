@@ -32,7 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     # Third party apps
-    
+    'drf_yasg',
     'rest_framework',
     'rest_framework.authtoken', 
     'corsheaders',
@@ -233,7 +233,7 @@ TEMPLATES = [
 ]
 
 # Static files configuration
-STATIC_URL = '/static/'
+STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 

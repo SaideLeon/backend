@@ -27,3 +27,51 @@ media/
 
 # Diretório de arquivos estáticos gerados
 staticfiles/
+# Arquivos compilados Python
+*.py[cod]
+*$py.class
+__pycache__/
+
+# Distribuições
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtualenv
+venv/
+ENV/
+env/
+.venv/
+
+# Configurações de ambiente e secrets
+.env
+.env.*
+
+# Banco de dados SQLite (se for utilizado em desenvolvimento)
+db.sqlite3
+
+# Arquivos de log
+*.log
+
+# Pasta de arquivos estáticos coletados (geralmente em produção)
+staticfiles/
+
+# Pasta de mídia (caso a mesma seja gerada pelo Django)
+media/
+
+# IDEs e editores
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
